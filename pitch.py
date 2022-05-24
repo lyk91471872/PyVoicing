@@ -1,84 +1,98 @@
 from __future__ import annotations
-import sys
+from .chroma import *
 
 class Pitch:
 
-    def __init__(self, value: int|str|Pitch, octave: int|None=4):
+    def __init__(self, value: int|str|Chroma|Pitch, octave: int|None=4):
         match value:
             case int():     self.value = value
-            case str():     self.value = CHROMA_OF[value] + (octave+1)*12
-            case Pitch():    self.value = value.value
-            case _:         raise TypeError('expected value of type int|str|Pitch')
+            case str():     self.value = OFFSET_OF[value] + (octave+1)*12
+            case Chroma():  self.value = value.offset + (octave+1)*12
+            case Pitch():   self.value = value.value
+            case _:         raise TypeError('expected value of type int|str|Chroma|Pitch')
 
     def __str__(self):
-        octave, chroma = divmod(self.value, 12)
-        return f'{NAME_OF[chroma]}({octave-1})'
+        return f'{self.chroma}{self.octave}'
 
     def __repr__(self):
-        return f'<Pitch: {self.__str__()}>'
+        return f'Pitch("{self.chroma}", {self.octave})'
+
+    def __invert__(self):
+        return self.value
 
     def __hash__(self):
         return hash(str(self))
 
     def __lt__(self, other: Any):
         match other:
-            case Pitch():    return self.value < other.value
             case int():     return self.value < other
+            case Pitch():   return self.value < other.value
             case _:         return NotImplemented
 
     def __le__(self, other: Any):
         match other:
-            case Pitch():    return self.value <= other.value
             case int():     return self.value <= other
+            case Pitch():   return self.value <= other.value
             case _:         return NotImplemented
 
     def __gt__(self, other: Any):
         match other:
-            case Pitch():    return self.value > other.value
             case int():     return self.value > other
+            case Pitch():   return self.value > other.value
             case _:         return NotImplemented
 
     def __ge__(self, other: Any):
         match other:
-            case Pitch():    return self.value >= other.value
             case int():     return self.value >= other
+            case Pitch():   return self.value >= other.value
             case _:         return NotImplemented
 
     def __eq__(self, other: Any):
         match other:
-            case Pitch():    return self.value == other.value
-            case int():     return self.value == other
-            case _:         return False
+            case int():         return self.value == other
+            case str():         return self.chroma == other
+            case Interval():    return self.offset == other.distance
+            case Chroma():      return self.offset == other.offset
+            case Pitch():       return self.value == other.value
+            case _:             return False
 
-    def __ne__(self, other: Any):
+    #transpose upwards
+    def __mul__(self, interval: int|str|Interval|Chroma|Pitch) -> Pitch:
+        match interval:
+            case Pitch():   return Pitch(self.value+interval.value)
+            case _:         return Pitch(self.value+Interval(interval).distance)
+
+    #transpose downwards
+    def __truediv__(self, interval: int|str|Interval|Chroma|Pitch) -> Pitch:
+        match interval:
+            case Pitch():   return Pitch(self.value-interval.value)
+            case _:         return Pitch(self.value-Interval(interval).distance)
+
+    #concat list
+    def __add__(self, other: int|Pitch|list[Pitch]) -> list[Pitch]:
         match other:
-            case Pitch():    return self.value != other.value
-            case int():     return self.value != other
-            case _:         return True
+            case int()|Pitch(): return sorted([Pitch(self), Pitch(other)])
+            case list():        return sorted([Pitch(self)]+[Pitch(_) for _ in other])
 
-    def __add__(self, other: int|Pitch|list[Pitch]) -> Pitch|list[Pitch]:
+    #append
+    def __radd__(self, other: int|Pitch|list[Pitch]) -> list[Pitch]:
         match other:
-            case int():     return Pitch(self.value+other)   #transpose
-            case Pitch():    return sorted([Pitch(self), Pitch(other)])
-            case list():    return sorted([Pitch(self)]+[Pitch(_) for _ in other])
+            case int()|Pitch(): return sorted([Pitch(self), Pitch(other)])
+            case list():        return sorted([Pitch(self)]+[Pitch(_) for _ in other])
 
-    def __radd__(self, other: int|Pitch|list[Pitch]) -> Pitch|list[Pitch]:
-        match other:
-            case int():     return Pitch(self.value+other)   #transpose
-            case Pitch():    return sorted([Pitch(self), Pitch(other)])
-            case list():    return sorted([Pitch(self)]+[Pitch(_) for _ in other])
+    def __sub__(self, other: int|Pitch) -> int:
+        return self.value - Pitch(other).value
 
-    #int: transpose; Pitch: compute diff
-    def __sub__(self, other: int|Pitch) -> int|Pitch:
-        if isinstance(other, int): return Pitch(self.value-other)
-        return self.value - other.value
+    #remove
+    def __rsub__(self, pitches: list[Pitch]) -> list[Pitch]:
+        return [Pitch(_) for _ in pitches if _!=self]
 
     @property
-    def chroma(self):
+    def offset(self):
         return self.value % 12
 
-    @chroma.setter
-    def chroma(self, value: int):
+    @offset.setter
+    def offset(self, value: int):
         self.value = (self.octave+1)*12 + value
 
     @property
@@ -87,129 +101,52 @@ class Pitch:
 
     @octave.setter
     def octave(self, value: int):
-        self.value = self.chroma + (value+1)*12
+        self.value = self.offset + (value+1)*12
 
     @property
-    def name(self):
-        return NAME_OF[self.chroma]
+    def chroma(self):
+        return CHROMA_OF[self.offset]
 
-    @name.setter
-    def name(self, value: str):
-        self.chroma = CHROMA_OF[value]
-
-
-##dicts##
-
-NAME_OF = {
-    0:  'C',
-    1:  'Db',
-    2:  'D',
-    3:  'Eb',
-    4:  'E',
-    5:  'F',
-    6:  'Gb',
-    7:  'G',
-    8:  'Ab',
-    9:  'A',
-    10: 'Bb',
-    11: 'B',
-}
-
-CHROMA_OF = {
-    'C':   0,
-    'C#':  1,
-    'Db':  1,
-    'D':   2,
-    'D#':  3,
-    'Eb':  3,
-    'E':   4,
-    'F':   5,
-    'F#':  6,
-    'Gb':  6,
-    'G':   7,
-    'G#':  8,
-    'Ab':  8,
-    'A':   9,
-    'A#': 10,
-    'Bb': 10,
-    'B':  11,
-}
-
-INTERVAL_OF = {
-    0:  'U',
-    1:  'm2',
-    2:  'M2',
-    3:  'm3',
-    4:  'M3',
-    5:  'P4',
-    6:  'T',
-    7:  'P5',
-    8:  'm6',
-    9:  'M6',
-    10: 'm7',
-    11: 'M7',
-    12: 'O',
-}
-
-OFFSET_OF = {
-    'U':   0,   #Unison
-    'P1':  0,   #Perfect first
-    'm2':  1,   #minor second
-    'M2':  2,   #Major second
-    'm3':  3,   #minor third
-    'M3':  4,   #Major third
-    'P4':  5,   #Perfect fourth
-    'A4':  6,   #Augmented fourth
-    'T':   6,   #Tritone
-    'd5':  6,   #diminished fifth
-    'P5':  7,   #Perfect fifth
-    'm6':  8,   #minor sixth
-    'M6':  9,   #Major sixth
-    'm7': 10,   #minor seventh
-    'D7': 10,   #Dominant seventh
-    'M7': 11,   #Major seventh
-    'P8': 12,   #Perfect eighth
-    'O':  12,   #Octave
-}
+    @chroma.setter
+    def chroma(self, value: str):
+        self.offset = OFFSET_OF[value]
 
 
-##shortcuts##
-
-def P(value: int|str|Pitch, octave: int|None=4):
+def P(value: int|str|Pitch, octave: int|None=4) -> Pitch:
     return Pitch(value, octave)
 
-def A(octave: int=4):
-    return Pitch('A', octave)
+def A(octave: int=None) -> Chroma|Pitch:
+    return Pitch('A', octave) if octave is not None else Chroma('A')
 
-def Bb(octave: int=4):
-    return Pitch('Bb', octave)
+def Bb(octave: int=None) -> Chroma|Pitch:
+    return Pitch('Bb', octave) if octave is not None else Chroma('Bb')
 
-def B(octave: int=4):
-    return Pitch('B', octave)
+def B(octave: int=None) -> Chroma|Pitch:
+    return Pitch('B', octave) if octave is not None else Chroma('B')
 
-def C(octave: int=4):
-    return Pitch('C', octave)
+def C(octave: int=None) -> Chroma|Pitch:
+    return Pitch('C', octave) if octave is not None else Chroma('C')
 
-def Db(octave: int=4):
-    return Pitch('Db', octave)
+def Db(octave: int=None) -> Chroma|Pitch:
+    return Pitch('Db', octave) if octave is not None else Chroma('Db')
 
-def D(octave: int=4):
-    return Pitch('D', octave)
+def D(octave: int=None) -> Chroma|Pitch:
+    return Pitch('D', octave) if octave is not None else Chroma('D')
 
-def Eb(octave: int=4):
-    return Pitch('Eb', octave)
+def Eb(octave: int=None) -> Chroma|Pitch:
+    return Pitch('Eb', octave) if octave is not None else Chroma('Eb')
 
-def E(octave: int=4):
-    return Pitch('E', octave)
+def E(octave: int=None) -> Chroma|Pitch:
+    return Pitch('E', octave) if octave is not None else Chroma('E')
 
-def F(octave: int=4):
-    return Pitch('F', octave)
+def F(octave: int=None) -> Chroma|Pitch:
+    return Pitch('F', octave) if octave is not None else Chroma('F')
 
-def Gb(octave: int=4):
-    return Pitch('Gb', octave)
+def Gb(octave: int=None) -> Chroma|Pitch:
+    return Pitch('Gb', octave) if octave is not None else Chroma('Gb')
 
-def G(octave: int=4):
-    return Pitch('G', octave)
+def G(octave: int=None) -> Chroma|Pitch:
+    return Pitch('G', octave) if octave is not None else Chroma('G')
 
-def Ab(octave: int=4):
-    return Pitch('Ab', octave)
+def Ab(octave: int=None) -> Chroma|Pitch:
+    return Pitch('Ab', octave) if octave is not None else Chroma('Ab')

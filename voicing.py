@@ -1,25 +1,45 @@
 from __future__ import annotations
-from pitch import *
+from .pitch import *
 
 class Voicing:
 
-    def __init__(self, value: int|Pitch|Voicing, pitches: list[Pitch]=[]):
-        match value:
-            case int():     pass
-            case Pitch():    pass
-            case Voicing(): value, pitches = (value.root, value.pitches)
-            case _:         raise TypeError('expected value of type Pitch|list[Pitch]')
-        self.root = Pitch(value)    #root not in pitches if the voicing is rootless
+    def __init__(self, root: int|str|Chroma|Pitch|Voicing, pitches: list[Pitch]=[]):
+        if isinstance(root, str) and ',' in root:
+            self.csv = root
+            return
+        if callable(root):
+            root = root()
+        elif isinstance(root, Voicing):
+            root, pitches = (root.root, root.pitches)
+        self.root = root
+        self.pitches = [Pitch(_) for _ in pitches]
+
+    @property
+    def root(self):
+        return self._root
+
+    @root.setter
+    def root(self, value: int|str|Chroma|Pitch):
+        self._root = Chroma(value)
+
+    @property
+    def csv(self):
+        if len(self) == 0: return str(self.root.offset)
+        return f'{self.root.offset},{",".join((str(_.value) for _ in self))}'
+
+    @csv.setter
+    def csv(self, data: str):
+        self.root, *pitches = (int(_) for _ in data.split(','))
         self.pitches = [Pitch(_) for _ in pitches]
 
     def quality(self):
         return ''
 
     def __str__(self):
-        return f'{self.root}{self.quality()}[{", ".join([str(_) for _ in self.pitches])}]'
+        return f'{self.root}{self.quality()}[{", ".join([str(_) for _ in self])}]'
 
     def __repr__(self):
-        return f'<Voicing {self.__str__()}>'
+        return f'Voicing({self.root}, {self.pitches})'
 
     def __hash__(self):
         return hash(str(self))
@@ -32,12 +52,14 @@ class Voicing:
 
     #compare two voicings (relationship root<->pitches)
     def __eq__(self, other: Voicing):
-        return (self<<self.root-other.root).pitches == other.pitches
+        if (not isinstance(other, Voicing)) or len(self)!=len(other):
+            return False
+        return (self<<self[0]-other[0]).pitches == other.pitches
 
     #whether other.pitches is subset of self.pitches
     def __gt__(self, other: Voicing):
-        for pitch in other.pitches:
-            if pitch not in self.pitches: return False
+        for pitch in other:
+            if pitch not in self: return False
         return len(self) > len(other)
 
     def __ge__(self, other: Voicing):
@@ -47,23 +69,23 @@ class Voicing:
     def __mod__(self, value: int|str):
         if isinstance(value, str): value = OFFSET_OF[value]
         lowers = []
-        for i in range(len(self.pitches)-1):
-            for j in range(i, len(self.pitches)):
-                if self.pitches[j]-self.pitches[i] == value:
-                    lowers.append(Pitch(self.pitches[i]))
+        for i in range(len(self)-1):
+            for j in range(i, len(self)):
+                if self[j]-self[i] == value:
+                    lowers.append(Pitch(self[i]))
         return lowers
 
     def __add__(self, value: Pitch|list[Pitch]|Voicing):  #different voices can share a same pitch
         ret = Voicing(self)
         match value:
             case Pitch():
-                if value not in self.pitches: ret.pitches.append(Pitch(value))
+                if value not in self: ret.pitches.append(Pitch(value))
             case list():
                 for pitch in value:
                     if not isinstance(pitch, Pitch): raise TypeError('elements in list should be instances of Pitch')
                     ret.pitches.append(Pitch(pitch))
             case Voicing():
-                for pitch in value.pitches:
+                for pitch in value:
                     if not isinstance(pitch, Pitch): raise TypeError('elements in list should be instances of Pitch')
                     ret.pitches.append(Pitch(pitch))
             case _: raise TypeError('expected value of type Pitch|list[Pitch]|Voicing')
@@ -74,89 +96,119 @@ class Voicing:
         ret = Voicing(self)
         match value:
             case Pitch():
-                if value in self.pitches: ret.pitches.remove(value)
+                if value in self: ret.pitches.remove(value)
             case list():
                 for pitch in value:
                     if not isinstance(pitch, Pitch): raise TypeError('elements in list should be instances of Pitch')
-                    if pitch in self.pitches: ret.pitches.remove(pitch)
+                    if pitch in self: ret.pitches.remove(pitch)
             case Voicing():
-                for pitch in value.pitches:
+                for pitch in value:
                     if not isinstance(pitch, Pitch): raise TypeError('elements in list should be instances of Pitch')
-                    if pitch in self.pitches: ret.pitches.remove(pitch)
+                    if pitch in self: ret.pitches.remove(pitch)
             case _: raise TypeError('expected value of type Pitch|list[Pitch]|Voicing')
         return ret
 
     #transpose upwards
-    def __rshift__(self, value: int|str):
+    def __rshift__(self, value: int|str|Interval) -> Voicing:
         ret = Voicing(self)
-        match value:
-            case int(): pass
-            case str(): value = OFFSET_OF[value]
-            case _:     raise TypeError('expected value of type int|str')
         ret.root += value
-        for i in range(len(ret.pitches)): ret.pitches[i] += value
+        for i in range(len(ret)): ret[i] *= value
         return ret
 
     #transpose downwards
-    def __lshift__(self, value: int|str):
+    def __lshift__(self, value: int|str|Interval|Chroma) -> Voicing:
         ret = Voicing(self)
-        match value:
-            case int(): pass
-            case str(): value = OFFSET_OF[value]
-            case _:     raise TypeError('expected value of type int|str')
         ret.root -= value
-        for i in range(len(ret.pitches)): ret.pitches[i] -= value
+        for i in range(len(ret)): ret[i] /= value
         return ret
 
     #compute interval matrix, ascending (positive) intervals only
     #row index: lower pitch index, column index: higher pitch index
     def matrix(self):
         interval_matrix = []
-        for i in range(len(self.pitches)-1):
+        for i in range(len(self)-1):
             interval_matrix.append([])
-            for j in range(1, len(self.pitches)):
-                interval = self.pitches[j]-self.pitches[i] if j>i else 0
+            for j in range(1, len(self)):
+                interval = self[j]-self[i] if j>i else 0
                 interval_matrix[i].append(interval)
         return interval_matrix
 
-    #chordal components
+    def index(self, key: int|str|Pitch|Chroma) -> int:
+        if callable(key):
+            key = key()
+        elif isinstance(key, str):
+            if any(_.isdigit() for _ in key):
+                return (~self).index(key) if key in ~self else -1
+            key = Chroma(key)
+        return self.pitches.index(key)
+
+    def __getitem__(self, key: int|str|Pitch|Chroma) -> Pitch:
+        if isinstance(key, int): return self.pitches[key]
+        if callable(key): key = key()
+        return self[self.index(key)] if key in self or key in ~self else None
+
+    def __delitem__(self, key: int|str|Pitch|Chroma):
+        if isinstance(key, int):
+            del self.pitches[key]
+        else:
+            del self.pitches[self.index(key)]
+
+    def __setitem__(self, key: int|str|Pitch|Chroma, value: int|Pitch):
+        if isinstance(key, int):
+            self.pitches[key] = Pitch(value)
+        else:
+            self.pitches[self.index(key)] = Pitch(value)
+
+    #chordal tones
     def __invert__(self):
-        def role_of(p: Pitch):
-            return ROLE_OF[p.chroma+(0 if p.octave<0 else 12)]
-        return [role_of(_) for _ in (self<<self.root.value).pitches]
+        offsets = [_.offset for _ in (self<<self.root)]
+        def has(*values): return any(_ in offsets for _ in values)
+        root = 128
+        tones = []
+        for i, p in enumerate(self):
+            match offsets[i]:
+                case 0:
+                    root = min(root, p)
+                    tones.append('1')
+                case 1:
+                    tones.append('b9')
+                case 2:
+                    if p-root > 12:
+                        tones.append('9' if has(10, 11) else 'add9')
+                    else:
+                        tones.append('add2' if has(3, 4) else 'sus2')
+                case 3:
+                    root = min(root, p-3)
+                    tones.append('#9' if has(4) else 'min3')
+                case 4:
+                    root = min(root, p-4)
+                    tones.append('maj3')
+                case 5:
+                    if p-root > 12:
+                        tones.append('11' if has(10, 11) else 'add11')
+                    else:
+                        tones.append('add4' if has(3, 4) else 'sus4')
+                case 6:
+                    if has(4, 7, 9):    tones.append('#11')
+                    elif has(3, 5):     tones.append('b5')
+                    else:               tones.append('#11' if p-root>12 else 'b5')
+                case 7:
+                    tones.append('5')
+                case 8:
+                    tones.append('b13' if has(1, 3, 5, 6, 7, 9, 10) else '#5')
+                case 9:
+                    if p-root>12:
+                        tones.append('13')
+                    elif all(_ in offsets for _ in (0, 3, 6)) and not has(10, 11):
+                        tones.append('dim7')
+                    else:
+                        tones.append('6')
+                case 10:
+                    tones.append('min7' if has(3) else 'dom7')
+                case 11:
+                    tones.append('maj7')
+        return tones
 
 
-##dicts##
-
-ROLE_OF = {
-    0:  '1',
-    1:  'b9',
-    2:  'S2',
-    3:  'm3',
-    4:  'M3',
-    5:  'S4',
-    6:  'b5',
-    7:  '5',
-    8:  '#5',
-    9:  '6',
-    10: 'm7',
-    11: 'M7',
-    12: '1',
-    13: 'b9',
-    14: '9',
-    15: 'm3',
-    16: 'M3',
-    17: '11',
-    18: '#11',
-    19: '5',
-    20: 'b13',
-    21: '13',
-    22: 'm7',
-    23: 'M7',
-}
-
-
-##shortcuts##
-
-def V(value: int|Pitch|Voicing, pitches: list[Pitch]=[]):
-    return Voicing(value, pitches)
+def V(root: int|str|Chroma|Pitch|Voicing, pitches: list[Pitch]=[]):
+    return Voicing(root, pitches)
