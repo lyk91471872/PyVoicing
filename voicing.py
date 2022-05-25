@@ -109,10 +109,24 @@ class Voicing:
         return ret
 
     #transpose upwards
+    def __mul__(self, value: int|str|Interval) -> Voicing:
+        ret = Voicing(self)
+        ret.root += value
+        for i in range(len(ret)): ret[i] *= value
+        return ret
+
+    #transpose upwards
     def __rshift__(self, value: int|str|Interval) -> Voicing:
         ret = Voicing(self)
         ret.root += value
         for i in range(len(ret)): ret[i] *= value
+        return ret
+
+    #transpose downwards
+    def __truediv__(self, value: int|str|Interval|Chroma) -> Voicing:
+        ret = Voicing(self)
+        ret.root -= value
+        for i in range(len(ret)): ret[i] /= value
         return ret
 
     #transpose downwards
@@ -121,6 +135,11 @@ class Voicing:
         ret.root -= value
         for i in range(len(ret)): ret[i] /= value
         return ret
+
+    #transpose to
+    def __floordiv__(self, target: int|Pitch) -> Voicing:
+        root = self[0]<<self[0].chroma-self.root
+        return self<<root-target
 
     #compute interval matrix, ascending (positive) intervals only
     #row index: lower pitch index, column index: higher pitch index

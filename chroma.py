@@ -31,12 +31,28 @@ class Chroma:
             case _:         return False
 
     #transpose upwards
+    def __mul__(self, value: int|str|Interval) -> Chroma:
+        return Chroma((Interval(value)+self.offset).offset)
+
+    #transpose upwards
     def __add__(self, value: int|str|Interval) -> Chroma:
         return Chroma((Interval(value)+self.offset).offset)
 
+    #transpose upwards
+    def __rshift__(self, value: int|str|Interval) -> Chroma:
+        return Chroma((Interval(value)+self.offset).offset)
+
     #transpose downwards
+    def __truediv__(self, value: int|str|Interval) -> Chroma:
+        return Chroma(self.offset-Interval(value).distance)
+
+    #transpose downwards or compute difference
     def __sub__(self, value: int|str|Interval|Chroma) -> int|Chroma:
         if isinstance(value, Chroma): return (self.offset-value.offset) % 12
+        return Chroma(self.offset-Interval(value).distance)
+
+    #transpose downwards
+    def __lshift__(self, value: int|str|Interval) -> Chroma:
         return Chroma(self.offset-Interval(value).distance)
 
     #remove

@@ -12,13 +12,13 @@ class Pitch:
             case _:         raise TypeError('expected value of type int|str|Chroma|Pitch')
 
     def __str__(self):
-        return f'{self.chroma}{self.octave}'
+        return f'{self.name}{self.octave}'
 
     def __repr__(self):
-        return f'Pitch("{self.chroma}", {self.octave})'
+        return f'Pitch("{self.name}", {self.octave})'
 
     def repr(self):
-        return f'{self.chroma}({self.octave})'
+        return f'{self.name}({self.octave})'
 
     def __invert__(self):
         return self.value
@@ -53,7 +53,7 @@ class Pitch:
     def __eq__(self, other: Any):
         match other:
             case int():         return self.value == other
-            case str():         return self.chroma == other
+            case str():         return self.name == other
             case Interval():    return self.offset == other.distance
             case Chroma():      return self.offset == other.offset
             case Pitch():       return self.value == other.value
@@ -65,8 +65,20 @@ class Pitch:
             case Pitch():   return Pitch(self.value+interval.value)
             case _:         return Pitch(self.value+Interval(interval).distance)
 
+    #transpose upwards
+    def __rshift__(self, interval: int|str|Interval|Chroma|Pitch) -> Pitch:
+        match interval:
+            case Pitch():   return Pitch(self.value+interval.value)
+            case _:         return Pitch(self.value+Interval(interval).distance)
+
     #transpose downwards
     def __truediv__(self, interval: int|str|Interval|Chroma|Pitch) -> Pitch:
+        match interval:
+            case Pitch():   return Pitch(self.value-interval.value)
+            case _:         return Pitch(self.value-Interval(interval).distance)
+
+    #transpose downwards
+    def __lshift__(self, interval: int|str|Interval|Chroma|Pitch) -> Pitch:
         match interval:
             case Pitch():   return Pitch(self.value-interval.value)
             case _:         return Pitch(self.value-Interval(interval).distance)
@@ -83,6 +95,7 @@ class Pitch:
             case int()|Pitch(): return sorted([Pitch(self), Pitch(other)])
             case list():        return sorted([Pitch(self)]+[Pitch(_) for _ in other])
 
+    #compute difference
     def __sub__(self, other: int|Pitch) -> int:
         return self.value - Pitch(other).value
 
@@ -107,12 +120,20 @@ class Pitch:
         self.value = self.offset + (value+1)*12
 
     @property
-    def chroma(self):
+    def name(self):
         return CHROMA_OF[self.offset]
 
-    @chroma.setter
-    def chroma(self, value: str):
+    @name.setter
+    def name(self, value: str):
         self.offset = OFFSET_OF[value]
+
+    @property
+    def chroma(self):
+        return Chroma(self)
+
+    @chroma.setter
+    def chroma(self, value: Chroma):
+        self.offset = value.offset
 
 
 def P(value: int|str|Pitch, octave: int|None=4) -> Pitch:
