@@ -163,12 +163,11 @@ class Voicing:
     def __invert__(self):
         offsets = [_.offset for _ in (self<<self.root)]
         def has(*values): return any(_ in offsets for _ in values)
-        root = 128
+        root = self[0]/offsets[0]
         tones = []
         for i, p in enumerate(self):
             match offsets[i]:
                 case 0:
-                    root = min(root, p)
                     tones.append('1')
                 case 1:
                     tones.append('b9')
@@ -178,10 +177,8 @@ class Voicing:
                     else:
                         tones.append('add2' if has(3, 4) else 'sus2')
                 case 3:
-                    root = min(root, p-3)
                     tones.append('#9' if has(4) else 'min3')
                 case 4:
-                    root = min(root, p-4)
                     tones.append('maj3')
                 case 5:
                     if p-root > 12:
