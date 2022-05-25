@@ -36,10 +36,10 @@ class Voicing:
         return ''
 
     def __str__(self):
-        return f'{self.root}{self.quality()}[{", ".join([str(_) for _ in self])}]'
+        return f'{self.root}{self.quality()}[{" ".join([str(_) for _ in self])}]'
 
     def __repr__(self):
-        return f'Voicing({self.root}, {self.pitches})'
+        return f'Voicing({self.root}, [{", ".join([_.repr() for _ in self])}])'
 
     def __hash__(self):
         return hash(str(self))

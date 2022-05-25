@@ -17,6 +17,9 @@ class Pitch:
     def __repr__(self):
         return f'Pitch("{self.chroma}", {self.octave})'
 
+    def repr(self):
+        return f'{self.chroma}({self.octave})'
+
     def __invert__(self):
         return self.value
 
