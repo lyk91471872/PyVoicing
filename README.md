@@ -5,7 +5,8 @@ A Python library for musical pitch, interval, and voicing analysis.
 ## Installation
 
 ```bash
-pip install pyvoicing
+git clone git@github.com:lyk91471872/PyVoicing.git
+pip install PyVoicing
 ```
 
 ## Usage
