@@ -16,16 +16,16 @@ T = TypeVar('T', bound='Chroma')
 
 class Chroma:
     """Represents a pitch class (chroma) independent of octave."""
-    
+
     def __init__(self, value: ChromaValue):
         """Initialize a Chroma.
-        
+
         Args:
             value: An integer, string, Chroma, or Pitch value
         """
         # Import here to avoid circular imports
         from .pitch import Pitch
-        
+
         match value:
             case int():
                 self.offset = value % 12
@@ -53,7 +53,7 @@ class Chroma:
     def __eq__(self, other: Any) -> bool:
         """Compare if two chromas are equal."""
         from .pitch import Pitch
-        
+
         match other:
             case int():
                 return self.offset == other % 12
@@ -97,14 +97,5 @@ class Chroma:
         from .pitch import Pitch
         return [Pitch(_) for _ in pitches if _ != self]
 
-
-def Ch(value: ChromaValue) -> Chroma:
-    """Helper function to create a Chroma object.
-    
-    Args:
-        value: An integer, string, Chroma, or Pitch value
-        
-    Returns:
-        A new Chroma object
-    """
-    return Chroma(value) 
+# shorthand
+Ch = Chroma

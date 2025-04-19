@@ -16,10 +16,10 @@ T = TypeVar('T', bound='Pitch')
 
 class Pitch:
     """Represents a musical pitch with specific octave."""
-    
+
     def __init__(self, value: PitchValue, octave: Optional[int] = 4):
         """Initialize a Pitch.
-        
+
         Args:
             value: An integer, string, Chroma, or Pitch value
             octave: An optional octave number (default: 4)
@@ -99,7 +99,7 @@ class Pitch:
     def __eq__(self, other: Any) -> bool:
         """Compare if two pitches are equal."""
         from .interval import Interval
-        
+
         match other:
             case int():
                 return self.value == other
@@ -117,7 +117,7 @@ class Pitch:
     def __mul__(self, interval: Union[int, str, 'Interval', Chroma, 'Pitch']) -> Pitch:
         """Transpose pitch upwards."""
         from .interval import Interval
-        
+
         match interval:
             case Pitch():
                 return Pitch(self.value + interval.value)
@@ -127,7 +127,7 @@ class Pitch:
     def __rshift__(self, interval: Union[int, str, 'Interval', Chroma, 'Pitch']) -> Pitch:
         """Transpose pitch upwards (alias for __mul__)."""
         from .interval import Interval
-        
+
         match interval:
             case Pitch():
                 return Pitch(self.value + interval.value)
@@ -137,7 +137,7 @@ class Pitch:
     def __truediv__(self, interval: Union[int, str, 'Interval', Chroma, 'Pitch']) -> Pitch:
         """Transpose pitch downwards."""
         from .interval import Interval
-        
+
         match interval:
             case Pitch():
                 return Pitch(self.value - interval.value)
@@ -147,7 +147,7 @@ class Pitch:
     def __lshift__(self, interval: Union[int, str, 'Interval', Chroma, 'Pitch']) -> Pitch:
         """Transpose pitch downwards (alias for __truediv__)."""
         from .interval import Interval
-        
+
         match interval:
             case Pitch():
                 return Pitch(self.value - interval.value)
@@ -219,11 +219,11 @@ class Pitch:
 
 def P(value: PitchValue, octave: Optional[int] = 4) -> Pitch:
     """Create a pitch object.
-    
+
     Args:
         value: An integer, string, Chroma, or Pitch value
         octave: An optional octave number (default: 4)
-        
+
     Returns:
         A new Pitch object
     """
@@ -232,10 +232,10 @@ def P(value: PitchValue, octave: Optional[int] = 4) -> Pitch:
 
 def A(octave: Optional[int] = None) -> Union[Chroma, Pitch]:
     """Create an A pitch or chroma.
-    
+
     Args:
         octave: Optional octave number. If None, returns a Chroma.
-        
+
     Returns:
         A Pitch if octave is specified, otherwise a Chroma
     """
@@ -294,4 +294,4 @@ def G(octave: Optional[int] = None) -> Union[Chroma, Pitch]:
 
 def Ab(octave: Optional[int] = None) -> Union[Chroma, Pitch]:
     """Create an Ab pitch or chroma."""
-    return Pitch('Ab', octave) if octave is not None else Chroma('Ab') 
+    return Pitch('Ab', octave) if octave is not None else Chroma('Ab')
