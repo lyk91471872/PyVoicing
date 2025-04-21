@@ -18,6 +18,22 @@ CHROMA_OF: Dict[int, str] = {
     11: 'B',
 }
 
+# Mapping from pitch offset to ABC notation (octave=4)
+ABC_OF: Dict[int, str] = {
+    0:  'C',
+    1:  '_D',
+    2:  'D',
+    3:  '_E',
+    4:  'E',
+    5:  'F',
+    6:  '_G',
+    7:  'G',
+    8:  '_A',
+    9:  'A',
+    10: '_B',
+    11: 'B',
+}
+
 # Mapping from interval offset to interval name
 INTERVAL_OF: Dict[int, str] = {
     0:  'U',    # Unison
@@ -53,6 +69,16 @@ OFFSET_OF: Dict[str, int] = {
     'A#':   10,
     'Bb':   10,
     'B':    11,
+    '^C':    1,
+    '_D':    1,
+    '^D':    3,
+    '_E':    3,
+    '^F':    6,
+    '_G':    6,
+    '^G':    8,
+    '_A':    8,
+    '^A':   10,
+    '_B':   10,
     'U':     0,  # Unison
     'm2':    1,  # minor second
     'M2':    2,  # Major second
@@ -89,4 +115,4 @@ OFFSET_OF: Dict[str, int] = {
     'min7': 10,
     'dom7': 10,
     'maj7': 11,
-} 
+}

@@ -3,21 +3,16 @@
 from __future__ import annotations
 from typing import Union, List, TypeVar, Optional, Any, TYPE_CHECKING
 
-from .constants import OFFSET_OF, CHROMA_OF
+from .constants import OFFSET_OF, CHROMA_OF, ABC_OF
 from .chroma import Chroma
 
 if TYPE_CHECKING:
     from .interval import Interval
 
-# Forward references and type aliases
-PitchValue = Union[int, str, Chroma, 'Pitch']
-T = TypeVar('T', bound='Pitch')
-
-
 class Pitch:
     """Represents a musical pitch with specific octave."""
 
-    def __init__(self, value: PitchValue, octave: Optional[int] = 4):
+    def __init__(self, value: Union[int, str, Chroma, 'Pitch'], octave: int=4):
         """Initialize a Pitch.
 
         Args:
@@ -43,10 +38,6 @@ class Pitch:
     def __repr__(self) -> str:
         """Create string representation for debugging."""
         return f'Pitch("{self.name}", {self.octave})'
-
-    def repr(self) -> str:
-        """Alternative string representation."""
-        return f'{self.name}({self.octave})'
 
     def __invert__(self) -> int:
         """Return the MIDI value of the pitch."""
@@ -114,18 +105,12 @@ class Pitch:
             case _:
                 return False
 
-    def __mul__(self, interval: Union[int, str, 'Interval', Chroma, 'Pitch']) -> Pitch:
-        """Transpose pitch upwards."""
-        from .interval import Interval
-
-        match interval:
-            case Pitch():
-                return Pitch(self.value + interval.value)
-            case _:
-                return Pitch(self.value + Interval(interval).distance)
+    def __mul__(self, n: int) -> list[Pitch]:
+        """Return a list of copies."""
+        return [Pitch(self) for i in range(n)]
 
     def __rshift__(self, interval: Union[int, str, 'Interval', Chroma, 'Pitch']) -> Pitch:
-        """Transpose pitch upwards (alias for __mul__)."""
+        """Transpose pitch upwards."""
         from .interval import Interval
 
         match interval:
@@ -216,8 +201,31 @@ class Pitch:
         """Set the chroma while preserving the octave."""
         self.offset = value.offset
 
+    @property
+    def abc(self) -> str:
+        """Get the ABC notation of this pitch."""
+        abc = ABC_OF[self.offset]
+        if (va:=self.octave-4) <= 0:
+            return abc + ','*-va
+        return abc.lower() + "'"*(va-1)
 
-def P(value: PitchValue, octave: Optional[int] = 4) -> Pitch:
+    @abc.setter
+    def abc(self, abc: str) -> None:
+        name, suffix = (abc[0], abc[1:]) if abc[0].isalpha() else (abc[:2], abc[2:])
+        if (va:=int(name[-1].islower())):
+            name = name.upper()
+        va += suffix.count("'") - suffix.count(',')
+        self.offset = OFFSET_OF[name]
+        self.octave = 4 + va
+
+    @classmethod
+    def from_abc(cls, abc: str):
+        pitch = cls(0)
+        pitch.abc = abc
+        return pitch
+
+
+def P(value: Union[int, str, Chroma, 'Pitch'], octave: Optional[int] = 4) -> Pitch:
     """Create a pitch object.
 
     Args:
