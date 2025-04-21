@@ -64,7 +64,7 @@ class Voicing:
 
     def __repr__(self) -> str:
         """Create string representation for debugging."""
-        return f'Voicing({self.root}, [{", ".join([_.repr() for _ in self])}])'
+        return f'Voicing({self.root}, [{", ".join([str(_) for _ in self])}])'
 
     def __hash__(self) -> int:
         """Generate hash for the voicing."""
