@@ -1,8 +1,8 @@
 """Voicing module for representing and manipulating musical voicings."""
 
 from __future__ import annotations
-from typing import Union, List, TypeVar, Callable, Optional, Any, cast, TYPE_CHECKING
 import copy
+from typing import Union, List, Callable, Optional, Any, cast, TYPE_CHECKING
 
 from .constants import OFFSET_OF
 from .pitch import Pitch
@@ -64,7 +64,7 @@ class Voicing:
 
     def __repr__(self) -> str:
         """Create string representation for debugging."""
-        return f'Voicing({self.root}, [{", ".join([str(_) for _ in self])}])'
+        return f'Voicing([{", ".join([str(_) for _ in self])}], root={self.root})'
 
     def __hash__(self) -> int:
         """Generate hash for the voicing."""
@@ -352,8 +352,13 @@ class Voicing:
                     tones.append('dom7' if has(4) else 'min7')
                 case 11:
                     tones.append('maj7')
-
         return tones
+
+    def voice(self, pitch: Pitch):
+        if len(self) == 0:
+            return None
+        distance_from_pitch = lambda i: abs(self.pitches[i]-pitch)
+        return min(range(len(self)), key=distance_from_pitch)
 
 # shorthand
 V = Voicing
