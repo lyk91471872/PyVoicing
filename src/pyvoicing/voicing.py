@@ -108,26 +108,18 @@ class Voicing:
                     lowers.append(Pitch(self[i]))
         return lowers
 
-    def __add__(self, value: Union[Pitch, List[Pitch], Voicing]) -> Voicing:
+    def __add__(self, value: Union[int, str, Pitch, list[Pitch], Voicing]) -> Voicing:
         """Add pitch(es) to the voicing."""
         ret = copy.deepcopy(self)
 
         match value:
-            case Pitch():
-                if value not in self:
-                    ret.pitches.append(Pitch(value))
-            case list():
+            case int() | str() | Pitch():
+                ret.pitches.append(Pitch(value))
+            case list() | Voicing():
                 for pitch in value:
-                    if not isinstance(pitch, Pitch):
-                        raise TypeError('elements in list should be instances of Pitch')
-                    ret.pitches.append(Pitch(pitch))
-            case Voicing():
-                for pitch in value:
-                    if not isinstance(pitch, Pitch):
-                        raise TypeError('elements in list should be instances of Pitch')
                     ret.pitches.append(Pitch(pitch))
             case _:
-                raise TypeError('expected value of type Pitch|list[Pitch]|Voicing')
+                raise TypeError('expected value of type int|str|Pitch|list[Pitch]|Voicing')
 
         ret.pitches.sort()
         return ret
@@ -157,6 +149,7 @@ class Voicing:
 
         return ret
 
+    # TODO
     def __mul__(self, value: Union[int, str, 'Interval']) -> Voicing:
         """Transpose the voicing upwards."""
         from .interval import Interval
@@ -168,15 +161,17 @@ class Voicing:
         return ret
 
     def __rshift__(self, value: Union[int, str, 'Interval']) -> Voicing:
-        """Transpose the voicing upwards (alias for __mul__)."""
+        """Transpose the voicing upwards."""
         from .interval import Interval
 
         ret = copy.deepcopy(self)
-        ret.root += value
+        if ret.root is not None:
+            ret.root += value
         for i in range(len(ret)):
-            ret[i] *= value
+            ret[i] >>= value
         return ret
 
+    # TODO
     def __truediv__(self, value: Union[int, str, 'Interval', Chroma]) -> Voicing:
         """Transpose the voicing downwards."""
         from .interval import Interval
@@ -188,13 +183,14 @@ class Voicing:
         return ret
 
     def __lshift__(self, value: Union[int, str, 'Interval', Chroma]) -> Voicing:
-        """Transpose the voicing downwards (alias for __truediv__)."""
+        """Transpose the voicing downwards."""
         from .interval import Interval
 
         ret = copy.deepcopy(self)
-        ret.root -= value
+        if ret.root is not None:
+            ret.root -= value
         for i in range(len(ret)):
-            ret[i] /= value
+            ret[i] <<= value
         return ret
 
     def __floordiv__(self, target: Union[int, Pitch]) -> Voicing:

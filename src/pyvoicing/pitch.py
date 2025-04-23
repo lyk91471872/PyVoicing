@@ -23,7 +23,9 @@ class Pitch:
             case int():
                 self.value = value
             case str():
-                self.value = OFFSET_OF[value] + (octave + 1) * 12
+                chroma = ''.join(_ for _ in value if _.isalpha())
+                octave = int(value[len(chroma):])
+                self.value = OFFSET_OF[chroma] + (octave + 1) * 12
             case Chroma():
                 self.value = value.offset + (octave + 1) * 12
             case Pitch():
