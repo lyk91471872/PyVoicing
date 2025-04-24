@@ -207,6 +207,8 @@ class Pitch:
     def abc(self) -> str:
         """Get the ABC notation of this pitch."""
         abc = ABC_OF[self.offset]
+        if abc == 'z':
+            return abc
         if (va:=self.octave-4) <= 0:
             return abc + ','*-va
         return abc.lower() + "'"*(va-1)

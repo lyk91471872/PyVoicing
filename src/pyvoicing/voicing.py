@@ -1,8 +1,7 @@
 """Voicing module for representing and manipulating musical voicings."""
 
 from __future__ import annotations
-import copy
-from typing import Union, List, Callable, Optional, Any, cast, TYPE_CHECKING
+from typing import Union, Optional, Any, cast, TYPE_CHECKING
 
 from .constants import OFFSET_OF
 from .pitch import Pitch
@@ -14,7 +13,7 @@ if TYPE_CHECKING:
 class Voicing:
     """Represents a musical voicing (collection of pitches with a root)."""
 
-    def __init__(self, pitches: List[Pitch]=[], root: Union[int, str, Chroma, Pitch, Voicing, None]=None):
+    def __init__(self, pitches: list[Pitch]=[], root: Union[int, str, Chroma, Pitch, Voicing, None]=None):
         """Initialize a Voicing.
 
         Args:
@@ -22,7 +21,10 @@ class Voicing:
             pitches: List of pitches (optional)
         """
         self.pitches = [Pitch(_) for _ in pitches]
-        self.root = root
+        if root is None and isinstance(pitches, Voicing):
+            self.root = pitches.root
+        else:
+            self.root = root
 
     @property
     def root(self) -> Chroma:
@@ -96,7 +98,7 @@ class Voicing:
         """Check if this voicing is a superset of or equal to the other."""
         return self > other or self == other
 
-    def __mod__(self, value: Union[int, str]) -> List[Pitch]:
+    def __mod__(self, value: Union[int, str]) -> list[Pitch]:
         """Find pitches that form the given interval with higher pitches."""
         if isinstance(value, str):
             value = OFFSET_OF[value]
@@ -110,7 +112,7 @@ class Voicing:
 
     def __add__(self, value: Union[int, str, Pitch, list[Pitch], Voicing]) -> Voicing:
         """Add pitch(es) to the voicing."""
-        ret = copy.deepcopy(self)
+        ret = Voicing(self)
 
         match value:
             case int() | str() | Pitch():
@@ -124,9 +126,9 @@ class Voicing:
         ret.pitches.sort()
         return ret
 
-    def __sub__(self, value: Union[Pitch, List[Pitch], Voicing]) -> Voicing:
+    def __sub__(self, value: Union[Pitch, list[Pitch], Voicing]) -> Voicing:
         """Remove pitch(es) from the voicing."""
-        ret = copy.deepcopy(self)
+        ret = Voicing(self)
 
         match value:
             case Pitch():
@@ -149,34 +151,20 @@ class Voicing:
 
         return ret
 
-    # TODO
-    def __mul__(self, value: Union[int, str, 'Interval']) -> Voicing:
-        """Transpose the voicing upwards."""
-        from .interval import Interval
-
-        ret = copy.deepcopy(self)
-        ret.root += value
-        for i in range(len(ret)):
-            ret[i] *= value
-        return ret
+    def __mul__(self, n: int) -> list[Voicing]:
+        """Return a list of copies."""
+        return [Voicing(self) for i in range(n)]
 
     def __rshift__(self, value: Union[int, str, 'Interval']) -> Voicing:
         """Transpose the voicing upwards."""
-        from .interval import Interval
-
-        ret = copy.deepcopy(self)
-        if ret.root is not None:
-            ret.root += value
-        for i in range(len(ret)):
-            ret[i] >>= value
-        return ret
+        return Voicing([_>>value for _ in self], None if self.root is None else self.root>>value)
 
     # TODO
     def __truediv__(self, value: Union[int, str, 'Interval', Chroma]) -> Voicing:
         """Transpose the voicing downwards."""
         from .interval import Interval
 
-        ret = copy.deepcopy(self)
+        ret = Voicing(self)
         ret.root -= value
         for i in range(len(ret)):
             ret[i] /= value
@@ -184,24 +172,17 @@ class Voicing:
 
     def __lshift__(self, value: Union[int, str, 'Interval', Chroma]) -> Voicing:
         """Transpose the voicing downwards."""
-        from .interval import Interval
-
-        ret = copy.deepcopy(self)
-        if ret.root is not None:
-            ret.root -= value
-        for i in range(len(ret)):
-            ret[i] <<= value
-        return ret
+        return self.__rshift__(-value)
 
     def __floordiv__(self, target: Union[int, Pitch]) -> Voicing:
         """Transpose the voicing to a specific target pitch/value."""
         if len(self) == 0:
-            return copy.deepcopy(self)
+            return Voicing(self)
 
         root = self[0] << (self[0].chroma - self.root)
         return self << (root - target)
 
-    def matrix(self) -> List[List[int]]:
+    def matrix(self) -> list[list[int]]:
         """Compute the interval matrix between all pitches in the voicing.
 
         Returns:
@@ -286,7 +267,7 @@ class Voicing:
             if idx >= 0:
                 self.pitches[idx] = Pitch(value)
 
-    def __invert__(self) -> List[str]:
+    def __invert__(self) -> list[str]:
         """Analyze the chord tones relative to the root.
 
         Returns:
@@ -349,6 +330,10 @@ class Voicing:
                 case 11:
                     tones.append('maj7')
         return tones
+
+    @property
+    def abc(self) -> list[str]:
+        return [_.abc for _ in self]
 
     def voice(self, pitch: Pitch):
         if len(self) == 0:
