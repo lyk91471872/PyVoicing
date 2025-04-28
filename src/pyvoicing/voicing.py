@@ -1,25 +1,25 @@
-"""Voicing module for representing and manipulating musical voicings."""
-
 from __future__ import annotations
-from typing import Union, Optional, Any, cast, TYPE_CHECKING
 
+from typing import TYPE_CHECKING, Any, Optional, Union
+
+from .chroma import Chroma
 from .constants import OFFSET_OF
 from .pitch import Pitch
-from .chroma import Chroma
 
 if TYPE_CHECKING:
     from .interval import Interval
 
+
 class Voicing:
-    """Represents a musical voicing (collection of pitches with a root)."""
+    """Represents a musical voicing (collection of pitches possibly with a root)."""
 
-    def __init__(self, pitches: list[Pitch]=[], root: Union[int, str, Chroma, Pitch, Voicing, None]=None):
-        """Initialize a Voicing.
-
-        Args:
-            root: The root of the voicing
-            pitches: List of pitches (optional)
-        """
+    def __init__(
+        self,
+        pitches: Union[list[Union[int, str, Chroma, Pitch]], str] = [],
+        root: Union[int, str, Chroma, Pitch, Voicing, None] = None,
+    ):
+        if isinstance(pitches, str):
+            pitches = pitches.split(" ")
         self.pitches = [Pitch(_) for _ in pitches]
         if root is None and isinstance(pitches, Voicing):
             self.root = pitches.root
@@ -28,27 +28,19 @@ class Voicing:
 
     @property
     def root(self) -> Chroma:
-        """Get the root chroma of the voicing."""
         return self._root
 
     @root.setter
     def root(self, value: Union[int, str, Chroma, Pitch, None]) -> None:
-        """Set the root chroma of the voicing."""
         self._root = None if value is None else Chroma(value)
 
     @property
     def csv(self) -> str:
-        """Get CSV representation of the voicing."""
-        if len(self) == 0:
-            return str(self.root.offset)
-        return f'{self.root.offset},{",".join((str(_.value) for _ in self))}'
+        return ",".join(str(_.value) for _ in self)
 
     @csv.setter
-    def csv(self, csv: str) -> None:
-        """Set the voicing from a CSV representation."""
-        values = [int(_) for _ in csv.split(',')]
-        self.root = values[0]
-        self.pitches = [Pitch(_) for _ in values[1:]] if len(values) > 1 else []
+    def csv(self, csv: str, sep=",") -> None:
+        self.pitches = [Pitch(int(_)) for _ in csv.split(sep)]
 
     @classmethod
     def from_csv(cls, csv: str):
@@ -56,20 +48,15 @@ class Voicing:
         v.csv = csv
         return v
 
-    def quality(self) -> str:
-        """Get the chord quality as a string."""
-        return ''
-
     def __str__(self) -> str:
-        """Convert voicing to a readable string."""
         return f'{self.root}{self.quality()}[{" ".join([str(_) for _ in self])}]'
 
     def __repr__(self) -> str:
-        """Create string representation for debugging."""
-        return f'Voicing([{", ".join([str(_) for _ in self])}], root={self.root})'
+        if self.root is None:
+            return f"Voicing('{' '.join(str(_) for _ in self)}')"
+        return f"Voicing('{' '.join(str(_) for _ in self)}', '{self.root}')"
 
     def __hash__(self) -> int:
-        """Generate hash for the voicing."""
         return hash(str(self))
 
     def __len__(self) -> int:
@@ -84,8 +71,10 @@ class Voicing:
         """Compare if two voicings are equivalent (taking into account transposition)."""
         if not isinstance(other, Voicing) or len(self) != len(other):
             return False
+        if len(self) == 0:
+            return True
         # Transpose to the same root and compare pitches
-        return (self << (self[0] - other[0])).pitches == other.pitches if len(self) > 0 else self.root == other.root
+        return (self << (self[0] - other[0])).pitches == other.pitches
 
     def __gt__(self, other: Voicing) -> bool:
         """Check if this voicing is a superset of the other."""
@@ -113,7 +102,6 @@ class Voicing:
     def __add__(self, value: Union[int, str, Pitch, list[Pitch], Voicing]) -> Voicing:
         """Add pitch(es) to the voicing."""
         ret = Voicing(self)
-
         match value:
             case int() | str() | Pitch():
                 ret.pitches.append(Pitch(value))
@@ -121,56 +109,57 @@ class Voicing:
                 for pitch in value:
                     ret.pitches.append(Pitch(pitch))
             case _:
-                raise TypeError('expected value of type int|str|Pitch|list[Pitch]|Voicing')
-
+                raise TypeError(
+                    "expected value of type int|str|Pitch|list[Pitch]|Voicing"
+                )
         ret.pitches.sort()
         return ret
 
-    def __sub__(self, value: Union[Pitch, list[Pitch], Voicing]) -> Voicing:
+    def __sub__(self, value: Union[str, Pitch, list[Pitch], Voicing]) -> Voicing:
         """Remove pitch(es) from the voicing."""
         ret = Voicing(self)
-
         match value:
+            case str():
+                p = Pitch(value)
+                if p in self:
+                    ret.pitches.remove(p)
             case Pitch():
                 if value in self:
                     ret.pitches.remove(value)
             case list():
-                for pitch in value:
-                    if not isinstance(pitch, Pitch):
-                        raise TypeError('elements in list should be instances of Pitch')
-                    if pitch in self:
-                        ret.pitches.remove(pitch)
+                for v in value:
+                    p = Pitch(v)
+                    if p in self:
+                        ret.pitches.remove(p)
             case Voicing():
                 for pitch in value:
-                    if not isinstance(pitch, Pitch):
-                        raise TypeError('elements in list should be instances of Pitch')
                     if pitch in self:
                         ret.pitches.remove(pitch)
             case _:
-                raise TypeError('expected value of type Pitch|list[Pitch]|Voicing')
-
+                raise TypeError("expected value of type str|Pitch|list[Pitch]|Voicing")
         return ret
 
     def __mul__(self, n: int) -> list[Voicing]:
         """Return a list of copies."""
         return [Voicing(self) for i in range(n)]
 
-    def __rshift__(self, value: Union[int, str, 'Interval']) -> Voicing:
+    def __rshift__(self, value: Union[int, str, "Interval"]) -> Voicing:
         """Transpose the voicing upwards."""
-        return Voicing([_>>value for _ in self], None if self.root is None else self.root>>value)
+        return Voicing(
+            [_ >> value for _ in self],
+            None if self.root is None else self.root >> value,
+        )
 
-    # TODO
-    def __truediv__(self, value: Union[int, str, 'Interval', Chroma]) -> Voicing:
-        """Transpose the voicing downwards."""
-        from .interval import Interval
+#    def __truediv__(self, value: Union[int, str, 'Interval', Chroma]) -> Voicing:
+#        """Transpose the voicing downwards."""
+#        from .interval import Interval
+#        ret = Voicing(self)
+#        ret.root -= value
+#        for i in range(len(ret)):
+#            ret[i] /= value
+#        return ret
 
-        ret = Voicing(self)
-        ret.root -= value
-        for i in range(len(ret)):
-            ret[i] /= value
-        return ret
-
-    def __lshift__(self, value: Union[int, str, 'Interval', Chroma]) -> Voicing:
+    def __lshift__(self, value: Union[int, str, "Interval", Chroma]) -> Voicing:
         """Transpose the voicing downwards."""
         return self.__rshift__(-value)
 
@@ -178,7 +167,6 @@ class Voicing:
         """Transpose the voicing to a specific target pitch/value."""
         if len(self) == 0:
             return Voicing(self)
-
         root = self[0] << (self[0].chroma - self.root)
         return self << (root - target)
 
@@ -190,7 +178,6 @@ class Voicing:
         """
         if len(self) <= 1:
             return []
-
         interval_matrix = []
         for i in range(len(self) - 1):
             interval_matrix.append([])
@@ -200,17 +187,7 @@ class Voicing:
         return interval_matrix
 
     def index(self, key: Union[int, str, Pitch, Chroma]) -> int:
-        """Find the index of a pitch in the voicing.
-
-        Args:
-            key: The pitch to find
-
-        Returns:
-            The index of the pitch or -1 if not found
-        """
-        if callable(key):
-            key = key()
-        elif isinstance(key, str):
+        if isinstance(key, str):
             if any(_.isdigit() for _ in key):
                 # Look for a pitch name with octave like "C4"
                 return (~self).index(key) if key in ~self else -1
@@ -233,10 +210,6 @@ class Voicing:
         """
         if isinstance(key, int):
             return self.pitches[key]
-
-        if callable(key):
-            key = key()
-
         idx = self.index(key)
         return self.pitches[idx] if idx >= 0 else None
 
@@ -253,7 +226,9 @@ class Voicing:
             if idx >= 0:
                 del self.pitches[idx]
 
-    def __setitem__(self, key: Union[int, str, Pitch, Chroma], value: Union[int, Pitch]) -> None:
+    def __setitem__(
+        self, key: Union[int, str, Pitch, Chroma], value: Union[int, Pitch]
+    ) -> None:
         """Set a pitch at the given index or replace a pitch.
 
         Args:
@@ -267,79 +242,53 @@ class Voicing:
             if idx >= 0:
                 self.pitches[idx] = Pitch(value)
 
-    def __invert__(self) -> list[str]:
-        """Analyze the chord tones relative to the root.
-
-        Returns:
-            A list of chord tone names
-        """
-        if not self.pitches:
-            return []
-
-        offsets = [_.offset for _ in (self << self.root)]
-
-        def has(*values):
-            return any(_ in offsets for _ in values)
-
-        if len(self) == 0:
-            return []
-
-        root = self[0] / offsets[0]
-        tones = []
-
-        for i, p in enumerate(self):
-            match offsets[i]:
-                case 0:
-                    tones.append('1')
-                case 1:
-                    tones.append('b9')
-                case 2:
-                    if p - root > 12:
-                        tones.append('9' if has(10, 11) else 'add9')
-                    else:
-                        tones.append('add2' if has(3, 4) else 'sus2')
-                case 3:
-                    tones.append('#9' if has(4) else 'min3')
-                case 4:
-                    tones.append('maj3')
-                case 5:
-                    if p - root > 12:
-                        tones.append('11' if has(10, 11) else 'add11')
-                    else:
-                        tones.append('add4' if has(3, 4) else 'sus4')
-                case 6:
-                    if has(4, 7, 9):
-                        tones.append('#11')
-                    elif has(3, 5):
-                        tones.append('b5')
-                    else:
-                        tones.append('#11' if p - root > 12 else 'b5')
-                case 7:
-                    tones.append('5')
-                case 8:
-                    tones.append('b13' if has(1, 3, 5, 6, 7, 9, 10) else '#5')
-                case 9:
-                    if p - root > 12:
-                        tones.append('13')
-                    elif all(_ in offsets for _ in (0, 3, 6)) and not has(10, 11):
-                        tones.append('dim7')
-                    else:
-                        tones.append('6')
-                case 10:
-                    tones.append('dom7' if has(4) else 'min7')
-                case 11:
-                    tones.append('maj7')
-        return tones
-
     @property
     def abc(self) -> list[str]:
         return [_.abc for _ in self]
 
-    def voice(self, pitch: Pitch):
+#    def voice(self, pitch: Pitch):
+#        """Closest voice to the given pitch"""
+#        if len(self) == 0:
+#            return None
+#        distance_from_pitch = lambda i: abs(self.pitches[i]-pitch)
+#        return min(range(len(self)), key=distance_from_pitch)
+
+    def __invert__(self) -> list[str]:
+        """Analyze the chord tones relative to the root."""
         if len(self) == 0:
-            return None
-        distance_from_pitch = lambda i: abs(self.pitches[i]-pitch)
-        return min(range(len(self)), key=distance_from_pitch)
+            return []
+        offsets = [_.offset for _ in (self << self.root)]
+        has = lambda *values: any(_ in offsets for _ in values)
+        tones = [
+            {
+                0: "1",
+                1: "b9",
+                2: "9" if has(3, 4) else "sus2",
+                3: "#9" if has(4) else "min3",
+                4: "maj3",
+                5: "11" if has(3, 4) else "sus4",
+                6: "#11" if has(4, 7) else "b5",
+                7: "5",
+                8: "b13" if has(3, 7, 10) else "#5",
+                9: "13" if has(10, 11) else "6",
+                10: "min7" if has(3) else "dom7",
+                11: "maj7",
+            }[_]
+            for _ in offsets
+        ]
+        if "b5" in tones and "6" in tones:
+            tones = ["dim7" if _ == "6" else _ for _ in tones]
+        return tones
+
+    def quality(self) -> str:
+        return ""
+#        if self.root is None or len(self) < 2:
+#            return ''
+#        tones = ~self
+#        base = ''
+#        tensions = ''
+#        return base + tensions
+
 
 # shorthand
 V = Voicing

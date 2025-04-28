@@ -1,56 +1,45 @@
-"""Pitch module for representing musical pitches."""
-
 from __future__ import annotations
-from typing import Union, List, TypeVar, Optional, Any, TYPE_CHECKING
 
-from .constants import OFFSET_OF, CHROMA_OF, ABC_OF
+from typing import TYPE_CHECKING, Any, List, Optional, Union
+
 from .chroma import Chroma
+from .constants import ABC_OF, CHROMA_OF, OFFSET_OF
 
 if TYPE_CHECKING:
     from .interval import Interval
 
+
 class Pitch:
-    """Represents a musical pitch with specific octave."""
-
-    def __init__(self, value: Union[int, str, Chroma, 'Pitch'], octave: int=4):
-        """Initialize a Pitch.
-
-        Args:
-            value: An integer, string, Chroma, or Pitch value
-            octave: An optional octave number (default: 4)
-        """
+    def __init__(self, value: Union[int, str, Chroma, Pitch], octave: int = 4):
         match value:
             case int():
                 self.value = value
             case str():
-                chroma = ''.join(_ for _ in value if _.isalpha())
-                octave = int(value[len(chroma):])
+                chroma = "".join(_ for _ in value if _.isalpha() or _ == "#")
+                if len(chroma) < len(value):
+                    octave = int(value[len(chroma) :])
                 self.value = OFFSET_OF[chroma] + (octave + 1) * 12
             case Chroma():
                 self.value = value.offset + (octave + 1) * 12
             case Pitch():
                 self.value = value.value
             case _:
-                raise TypeError('expected value of type int|str|Chroma|Pitch')
+                raise TypeError("expected value of type int|str|Chroma|Pitch")
 
     def __str__(self) -> str:
-        """Convert pitch to string representation."""
-        return f'{self.name}{self.octave}'
+        return f"{self.name}{self.octave}"
 
     def __repr__(self) -> str:
-        """Create string representation for debugging."""
-        return f'Pitch("{self.name}", {self.octave})'
+        return f"Pitch('{self.name}', {self.octave})"
 
     def __invert__(self) -> int:
         """Return the MIDI value of the pitch."""
         return self.value
 
     def __hash__(self) -> int:
-        """Generate hash for the pitch."""
         return hash(str(self))
 
     def __lt__(self, other: Any) -> bool:
-        """Compare if this pitch is lower than another."""
         match other:
             case int():
                 return self.value < other
@@ -60,7 +49,6 @@ class Pitch:
                 return NotImplemented
 
     def __le__(self, other: Any) -> bool:
-        """Compare if this pitch is lower than or equal to another."""
         match other:
             case int():
                 return self.value <= other
@@ -70,7 +58,6 @@ class Pitch:
                 return NotImplemented
 
     def __gt__(self, other: Any) -> bool:
-        """Compare if this pitch is higher than another."""
         match other:
             case int():
                 return self.value > other
@@ -80,7 +67,6 @@ class Pitch:
                 return NotImplemented
 
     def __ge__(self, other: Any) -> bool:
-        """Compare if this pitch is higher than or equal to another."""
         match other:
             case int():
                 return self.value >= other
@@ -90,7 +76,6 @@ class Pitch:
                 return NotImplemented
 
     def __eq__(self, other: Any) -> bool:
-        """Compare if two pitches are equal."""
         from .interval import Interval
 
         match other:
@@ -111,7 +96,9 @@ class Pitch:
         """Return a list of copies."""
         return [Pitch(self) for i in range(n)]
 
-    def __rshift__(self, interval: Union[int, str, 'Interval', Chroma, 'Pitch']) -> Pitch:
+    def __rshift__(
+        self, interval: Union[int, str, "Interval", Chroma, "Pitch"]
+    ) -> Pitch:
         """Transpose pitch upwards."""
         from .interval import Interval
 
@@ -121,7 +108,18 @@ class Pitch:
             case _:
                 return Pitch(self.value + Interval(interval).distance)
 
-    def __truediv__(self, interval: Union[int, str, 'Interval', Chroma, 'Pitch']) -> Pitch:
+    #    def __truediv__(self, interval: Union[int, str, 'Interval', Chroma, 'Pitch']) -> Pitch:
+    #        """Transpose pitch downwards."""
+    #        from .interval import Interval
+    #        match interval:
+    #            case Pitch():
+    #                return Pitch(self.value - interval.value)
+    #            case _:
+    #                return Pitch(self.value - Interval(interval).distance)
+
+    def __lshift__(
+        self, interval: Union[int, str, "Interval", Chroma, "Pitch"]
+    ) -> Pitch:
         """Transpose pitch downwards."""
         from .interval import Interval
 
@@ -131,17 +129,7 @@ class Pitch:
             case _:
                 return Pitch(self.value - Interval(interval).distance)
 
-    def __lshift__(self, interval: Union[int, str, 'Interval', Chroma, 'Pitch']) -> Pitch:
-        """Transpose pitch downwards (alias for __truediv__)."""
-        from .interval import Interval
-
-        match interval:
-            case Pitch():
-                return Pitch(self.value - interval.value)
-            case _:
-                return Pitch(self.value - Interval(interval).distance)
-
-    def __add__(self, other: Union[int, 'Pitch', List['Pitch']]) -> List['Pitch']:
+    def __add__(self, other: Union[int, "Pitch", List["Pitch"]]) -> List["Pitch"]:
         """Concat pitch with other pitch(es)."""
         match other:
             case int() | Pitch():
@@ -149,17 +137,17 @@ class Pitch:
             case list():
                 return sorted([Pitch(self)] + [Pitch(_) for _ in other])
             case _:
-                raise TypeError('expected value of type int|Pitch|list[Pitch]')
+                raise TypeError("expected value of type int|Pitch|list[Pitch]")
 
-    def __radd__(self, other: Union[int, 'Pitch', List['Pitch']]) -> List['Pitch']:
+    def __radd__(self, other: Union[int, "Pitch", List["Pitch"]]) -> List["Pitch"]:
         """Reverse add operation."""
         return self.__add__(other)
 
-    def __sub__(self, other: Union[int, 'Pitch']) -> int:
+    def __sub__(self, other: Union[int, "Pitch"]) -> int:
         """Compute interval between pitches."""
         return self.value - Pitch(other).value
 
-    def __rsub__(self, pitches: List['Pitch']) -> List['Pitch']:
+    def __rsub__(self, pitches: List["Pitch"]) -> List["Pitch"]:
         """Filter out this pitch from a list."""
         return [Pitch(_) for _ in pitches if _ != self]
 
@@ -207,103 +195,29 @@ class Pitch:
     def abc(self) -> str:
         """Get the ABC notation of this pitch."""
         abc = ABC_OF[self.offset]
-        if abc == 'z':
+        if abc == "z":
             return abc
-        if (va:=self.octave-4) <= 0:
-            return abc + ','*-va
-        return abc.lower() + "'"*(va-1)
+        if (va := self.octave - 4) <= 0:
+            return abc + "," * -va
+        return abc.lower() + "'" * (va - 1)
 
     @abc.setter
     def abc(self, abc: str) -> None:
+        """Set the ABC notation of this pitch."""
         name, suffix = (abc[0], abc[1:]) if abc[0].isalpha() else (abc[:2], abc[2:])
-        if (va:=int(name[-1].islower())):
+        if va := int(name[-1].islower()):
             name = name.upper()
-        va += suffix.count("'") - suffix.count(',')
+        va += suffix.count("'") - suffix.count(",")
         self.offset = OFFSET_OF[name]
         self.octave = 4 + va
 
     @classmethod
     def from_abc(cls, abc: str):
+        """Create a new pitch from ABC notation"""
         pitch = cls(0)
         pitch.abc = abc
         return pitch
 
 
-def P(value: Union[int, str, Chroma, 'Pitch'], octave: Optional[int] = 4) -> Pitch:
-    """Create a pitch object.
-
-    Args:
-        value: An integer, string, Chroma, or Pitch value
-        octave: An optional octave number (default: 4)
-
-    Returns:
-        A new Pitch object
-    """
-    return Pitch(value, octave)
-
-
-def A(octave: Optional[int] = None) -> Union[Chroma, Pitch]:
-    """Create an A pitch or chroma.
-
-    Args:
-        octave: Optional octave number. If None, returns a Chroma.
-
-    Returns:
-        A Pitch if octave is specified, otherwise a Chroma
-    """
-    return Pitch('A', octave) if octave is not None else Chroma('A')
-
-
-def Bb(octave: Optional[int] = None) -> Union[Chroma, Pitch]:
-    """Create a Bb pitch or chroma."""
-    return Pitch('Bb', octave) if octave is not None else Chroma('Bb')
-
-
-def B(octave: Optional[int] = None) -> Union[Chroma, Pitch]:
-    """Create a B pitch or chroma."""
-    return Pitch('B', octave) if octave is not None else Chroma('B')
-
-
-def C(octave: Optional[int] = None) -> Union[Chroma, Pitch]:
-    """Create a C pitch or chroma."""
-    return Pitch('C', octave) if octave is not None else Chroma('C')
-
-
-def Db(octave: Optional[int] = None) -> Union[Chroma, Pitch]:
-    """Create a Db pitch or chroma."""
-    return Pitch('Db', octave) if octave is not None else Chroma('Db')
-
-
-def D(octave: Optional[int] = None) -> Union[Chroma, Pitch]:
-    """Create a D pitch or chroma."""
-    return Pitch('D', octave) if octave is not None else Chroma('D')
-
-
-def Eb(octave: Optional[int] = None) -> Union[Chroma, Pitch]:
-    """Create an Eb pitch or chroma."""
-    return Pitch('Eb', octave) if octave is not None else Chroma('Eb')
-
-
-def E(octave: Optional[int] = None) -> Union[Chroma, Pitch]:
-    """Create an E pitch or chroma."""
-    return Pitch('E', octave) if octave is not None else Chroma('E')
-
-
-def F(octave: Optional[int] = None) -> Union[Chroma, Pitch]:
-    """Create an F pitch or chroma."""
-    return Pitch('F', octave) if octave is not None else Chroma('F')
-
-
-def Gb(octave: Optional[int] = None) -> Union[Chroma, Pitch]:
-    """Create a Gb pitch or chroma."""
-    return Pitch('Gb', octave) if octave is not None else Chroma('Gb')
-
-
-def G(octave: Optional[int] = None) -> Union[Chroma, Pitch]:
-    """Create a G pitch or chroma."""
-    return Pitch('G', octave) if octave is not None else Chroma('G')
-
-
-def Ab(octave: Optional[int] = None) -> Union[Chroma, Pitch]:
-    """Create an Ab pitch or chroma."""
-    return Pitch('Ab', octave) if octave is not None else Chroma('Ab')
+# shorthand
+P = Pitch

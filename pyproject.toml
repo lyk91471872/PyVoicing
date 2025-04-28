@@ -5,27 +5,29 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "pyvoicing"
 version = "0.1.0"
-description = "A Python library for musical pitch, interval, and voicing analysis"
+description = "A Python library for symbolic music analysis, focusing on chord voicings and tensions."
 readme = "README.md"
 requires-python = ">=3.10"
-license = {file = "LICENSE"}
-authors = []
+license = { file = "LICENSE" }
+authors = [
+  { name = "Yukang Luo", email = "yukangluo@yukangluo.com" }
+]
 classifiers = [
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
+  "Development Status :: 3 - Alpha",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent"
 ]
 
-# URLs removed to avoid validation errors
-# [project.urls]
-# "Homepage" = ""
-# "Bug Tracker" = ""
+[project.urls]
+Homepage = "https://github.com/lyk91471872/PyVoicing"
+"Bug Tracker" = "https://github.com/lyk91471872/PyVoicing/issues"
 
 [tool.setuptools]
-package-dir = {"" = "src"}
+package-dir = { "" = "src" }
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -43,4 +45,4 @@ line_length = 88
 
 [tool.black]
 line-length = 88
-target-version = ["py310"] 
+target-version = ["py310"]

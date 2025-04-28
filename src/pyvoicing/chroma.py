@@ -1,28 +1,18 @@
-"""Chroma module for representing pitch classes."""
-
 from __future__ import annotations
-from typing import Union, List, TypeVar, Any, TYPE_CHECKING
 
-from .constants import OFFSET_OF, CHROMA_OF
+from typing import TYPE_CHECKING, Any, List, Union
+
+from .constants import CHROMA_OF, OFFSET_OF
 from .interval import Interval
 
 if TYPE_CHECKING:
     from .pitch import Pitch
 
-# Forward references and type aliases
-ChromaValue = Union[int, str, 'Chroma', 'Pitch']
-T = TypeVar('T', bound='Chroma')
-
 
 class Chroma:
-    """Represents a pitch class (chroma) independent of octave."""
+    """Represents a pitch class (chroma) without a specific octave."""
 
-    def __init__(self, value: ChromaValue):
-        """Initialize a Chroma.
-
-        Args:
-            value: An integer, string, Chroma, or Pitch value
-        """
+    def __init__(self, value: Union[int, str, "Chroma", "Pitch"]):
         # Import here to avoid circular imports
         from .pitch import Pitch
 
@@ -36,22 +26,19 @@ class Chroma:
             case Pitch():
                 self.offset = value.offset
             case _:
-                raise TypeError('expected value of type int|str|Chroma|Pitch')
+                raise TypeError("expected value of type int|str|Chroma|Pitch")
 
     def __str__(self) -> str:
-        """Convert chroma to string representation."""
         return CHROMA_OF[self.offset]
 
     def __repr__(self) -> str:
-        """Create string representation for debugging."""
-        return f'Chroma("{self}")'
+        return f"Chroma('{self}')"
 
     def __invert__(self) -> int:
         """Return the offset value of the chroma."""
         return self.offset
 
     def __eq__(self, other: Any) -> bool:
-        """Compare if two chromas are equal."""
         from .pitch import Pitch
 
         match other:
@@ -65,6 +52,9 @@ class Chroma:
                 return self.offset == other.offset
             case _:
                 return False
+
+    def __neg__(self) -> int:
+        return -self.offset
 
     def __mul__(self, value: Union[int, str, Interval]) -> Chroma:
         """Transpose chroma upwards."""
@@ -95,7 +85,9 @@ class Chroma:
     def __rsub__(self, pitches: List[Pitch]) -> List[Pitch]:
         """Filter out pitches that match this chroma."""
         from .pitch import Pitch
+
         return [Pitch(_) for _ in pitches if _ != self]
 
+
 # shorthand
-Ch = Chroma
+C = Chroma
