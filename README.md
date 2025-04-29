@@ -9,8 +9,7 @@ A Python library for symbolic music analysis, focusing on chord voicings and ten
 ## Installation
 
 ```bash
-git clone git@github.com:lyk91471872/PyVoicing.git
-pip install PyVoicing
+pip install pyvoicing
 ```
 
 ## Usage
@@ -65,3 +64,6 @@ PyVoicing is licensed under the MIT License.
 
 ## Contributing
 Feature suggestions and bug reports are welcome!
+
+## Changelog
+See [CHANGELOG.md](https://github.com/lyk91471872/PyVoicing/blob/main/CHANGELOG.md) for version history and release notes.

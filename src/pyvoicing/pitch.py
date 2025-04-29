@@ -15,7 +15,10 @@ class Pitch:
             case int():
                 self.value = value
             case str():
-                chroma = "".join(_ for _ in value if _.isalpha() or _ == "#")
+                if any(_ in value for _ in '_=^'):
+                    self.abc = value
+                    return
+                chroma = ''.join(_ for _ in value if _.isalpha() or _ == '#')
                 if len(chroma) < len(value):
                     octave = int(value[len(chroma) :])
                 self.value = OFFSET_OF[chroma] + (octave + 1) * 12
@@ -204,10 +207,14 @@ class Pitch:
     @abc.setter
     def abc(self, abc: str) -> None:
         """Set the ABC notation of this pitch."""
+        if abc == 'z':
+            self.value = Rest()
+            return
         name, suffix = (abc[0], abc[1:]) if abc[0].isalpha() else (abc[:2], abc[2:])
         if va := int(name[-1].islower()):
             name = name.upper()
         va += suffix.count("'") - suffix.count(",")
+        self.value = 0
         self.offset = OFFSET_OF[name]
         self.octave = 4 + va
 
