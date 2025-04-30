@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.3] - 2025-04-30
+### Fixed
+- Rest.__str__()
+
+## [0.1.2] - 2025-04-30
+### Added
+- Voicings.Drop2/3/24
+- Voicings.int_list
+
 ## [0.1.1] - 2025-04-29
 ### Fixed
 - Corrected ABC notation parsing in Pitch.

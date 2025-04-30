@@ -35,6 +35,10 @@ class Voicing:
         self._root = None if value is None else Chroma(value)
 
     @property
+    def int_list(self):
+        return [_.value for _ in self]
+
+    @property
     def csv(self) -> str:
         return ",".join(str(_.value) for _ in self)
 
@@ -252,6 +256,21 @@ class Voicing:
 #            return None
 #        distance_from_pitch = lambda i: abs(self.pitches[i]-pitch)
 #        return min(range(len(self)), key=distance_from_pitch)
+
+    @property
+    def drop2(self):
+        assert len(self) == 4
+        return Voicing((self[2]<<12, self[0], self[1], self[3]), self.root)
+
+    @property
+    def drop3(self):
+        assert len(self) == 4
+        return Voicing((self[1]<<12, self[0], self[2], self[3]), self.root)
+
+    @property
+    def drop24(self):
+        assert len(self) == 4
+        return Voicing((self[0]<<12, self[2]<<12, self[1], self[3]), self.root)
 
     def __invert__(self) -> list[str]:
         """Analyze the chord tones relative to the root."""

@@ -10,10 +10,10 @@ class Rest(int):
         pass
 
     def __repr__(self):
-        return "Rest()"
+        return 'Rest()'
 
     def __str__(self):
-        return "Rest()"
+        return ''
 
     def __add__(self, other):
         return self

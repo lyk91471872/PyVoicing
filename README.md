@@ -38,11 +38,11 @@ a = e >> 'P4'   # transpose up a perfect 4th
 a <<= 12        # transpose down an octave
 
 # Voicing
-Cmaj7open = Voicing([middle_c, g, b, e], root='C')
-Cmaj7open   # Voicing('C4 G4 B4 E5', 'C')
-~Cmaj7open  # ['1', '5', 'maj7', 'maj5']
+Cmaj7 = Voicing([middle_c, g, b, e], root='C')
+Cmaj7       # Voicing('C4 G4 B4 E5', 'C')
+~Cmaj7      # ['1', '5', 'maj7', 'maj3']
 
-C69 = Cmaj7open + a - 'B4' + 'D5'
+C69 = Cmaj7 + a - 'B4' + 'D5'
 ~C69        # ['1', '5', '6', '9', 'maj3']
 C69 >> 3    # Voicing('Eb4 Bb4 C5 F5 G5', 'Eb')
 
@@ -50,13 +50,16 @@ Bm7b5 = V('B D5 F5 A5', 'B')  # shorthand
 ~Bm7b5      # ['1', 'min3', 'b5', 'min7']
 Bm7b5.root = 'G'
 ~Bm7b5      # ['maj3', '5', 'dom7', '9']
-G9rootless = V(Bm7b5)
+G9 = V(Bm7b5)
 
-C913rootless = G9rootless // 'C'
-C913rootless    # Voicing('E4 G4 Bb4 D5', 'C')
-C913rootless[1] >>= 2
-C913rootless    # Voicing('E4 A4 Bb4 D5', 'C')
-~C913rootless   # ['maj3', '13', 'dom7', '9']
+C9 = G9 // 'C'
+C9          # Voicing('E4 G4 Bb4 D5', 'C')
+C913 = V(C9)
+C913[1] >>= 'M2'
+C913        # Voicing('E4 A4 Bb4 D5', 'C')
+~C913       # ['maj3', '13', 'dom7', '9']
+C913.drop2  # Voicing('Bb3 E4 A4 D5', 'C')
+~C913.drop2 # ['dom7', 'maj3', '13', '9']
 ```
 
 ## License
