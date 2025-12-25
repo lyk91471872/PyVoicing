@@ -1,9 +1,19 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, List, Optional, Union
+from typing import TYPE_CHECKING, Any, Optional, Union
 
 from .chroma import Chroma
-from .constants import ABC_OF, CHROMA_OF, OFFSET_OF
+from .constants import (
+    ABC_OF,
+    ABC_OF_SHARP,
+    CHROMA_OF,
+    CHROMA_OF_SHARP,
+    LILYPOND_OF,
+    LILYPOND_OF_SHARP,
+    OFFSET_OF,
+)
+from .rest import Rest
+from .spelling import Spelling
 
 if TYPE_CHECKING:
     from .interval import Interval
@@ -79,15 +89,13 @@ class Pitch:
                 return NotImplemented
 
     def __eq__(self, other: Any) -> bool:
-        from .interval import Interval
-
         match other:
             case int():
                 return self.value == other
             case str():
+                if any(_.isdigit() for _ in other):
+                    return str(self) == other
                 return self.name == other
-            case Interval():
-                return self.offset == other.distance
             case Chroma():
                 return self.offset == other.offset
             case Pitch():
@@ -99,17 +107,29 @@ class Pitch:
         """Return a list of copies."""
         return [Pitch(self) for i in range(n)]
 
-    def __rshift__(
-        self, interval: Union[int, str, "Interval", Chroma, "Pitch"]
-    ) -> Pitch:
+    def transpose(self, interval: Union[int, str, "Interval", Chroma]) -> Pitch:
         """Transpose pitch upwards."""
         from .interval import Interval
 
-        match interval:
-            case Pitch():
-                return Pitch(self.value + interval.value)
-            case _:
-                return Pitch(self.value + Interval(interval).distance)
+        return Pitch(self.value + Interval(interval).distance)
+
+    def transpose_down(self, interval: Union[int, str, "Interval", Chroma]) -> Pitch:
+        """Transpose pitch downwards."""
+        from .interval import Interval
+
+        return Pitch(self.value - Interval(interval).distance)
+
+    def distance_to(self, other: Union[int, str, "Pitch"]) -> "Interval":
+        """Return the interval from this pitch to the other."""
+        from .interval import Interval
+
+        return Interval(Pitch(other).value - self.value)
+
+    def __rshift__(
+        self, interval: Union[int, str, "Interval", Chroma]
+    ) -> Pitch:
+        """Transpose pitch upwards."""
+        return self.transpose(interval)
 
     #    def __truediv__(self, interval: Union[int, str, 'Interval', Chroma, 'Pitch']) -> Pitch:
     #        """Transpose pitch downwards."""
@@ -121,38 +141,10 @@ class Pitch:
     #                return Pitch(self.value - Interval(interval).distance)
 
     def __lshift__(
-        self, interval: Union[int, str, "Interval", Chroma, "Pitch"]
+        self, interval: Union[int, str, "Interval", Chroma]
     ) -> Pitch:
         """Transpose pitch downwards."""
-        from .interval import Interval
-
-        match interval:
-            case Pitch():
-                return Pitch(self.value - interval.value)
-            case _:
-                return Pitch(self.value - Interval(interval).distance)
-
-    def __add__(self, other: Union[int, "Pitch", List["Pitch"]]) -> List["Pitch"]:
-        """Concat pitch with other pitch(es)."""
-        match other:
-            case int() | Pitch():
-                return sorted([Pitch(self), Pitch(other)])
-            case list():
-                return sorted([Pitch(self)] + [Pitch(_) for _ in other])
-            case _:
-                raise TypeError("expected value of type int|Pitch|list[Pitch]")
-
-    def __radd__(self, other: Union[int, "Pitch", List["Pitch"]]) -> List["Pitch"]:
-        """Reverse add operation."""
-        return self.__add__(other)
-
-    def __sub__(self, other: Union[int, "Pitch"]) -> int:
-        """Compute interval between pitches."""
-        return self.value - Pitch(other).value
-
-    def __rsub__(self, pitches: List["Pitch"]) -> List["Pitch"]:
-        """Filter out this pitch from a list."""
-        return [Pitch(_) for _ in pitches if _ != self]
+        return self.transpose_down(interval)
 
     @property
     def offset(self) -> int:
@@ -177,7 +169,8 @@ class Pitch:
     @property
     def name(self) -> str:
         """Get the pitch name."""
-        return CHROMA_OF[self.offset]
+        mapping = CHROMA_OF if Spelling.prefer_flat else CHROMA_OF_SHARP
+        return mapping[self.offset]
 
     @name.setter
     def name(self, value: str) -> None:
@@ -194,20 +187,54 @@ class Pitch:
         """Set the chroma while preserving the octave."""
         self.offset = value.offset
 
+    def spell(self, prefer_flat: Optional[bool] = None) -> str:
+        """Return pitch name with octave using the preferred spelling."""
+        use_flat = Spelling.prefer_flat if prefer_flat is None else prefer_flat
+        mapping = CHROMA_OF if use_flat else CHROMA_OF_SHARP
+        return f"{mapping[self.offset]}{self.octave}"
+
+    @property
+    def enharmonic(self) -> str:
+        """Return the opposite spelling with octave."""
+        return self.spell(prefer_flat=not Spelling.prefer_flat)
+
     @property
     def abc(self) -> str:
         """Get the ABC notation of this pitch."""
-        abc = ABC_OF[self.offset]
+        return self.abc_for()
+
+    def abc_for(self, prefer_flat: Optional[bool] = None) -> str:
+        """Return ABC notation using the preferred spelling."""
+        use_flat = Spelling.prefer_flat if prefer_flat is None else prefer_flat
+        mapping = ABC_OF if use_flat else ABC_OF_SHARP
+        abc = mapping[self.offset]
         if abc == "z":
             return abc
         if (va := self.octave - 4) <= 0:
             return abc + "," * -va
         return abc.lower() + "'" * (va - 1)
 
+    @property
+    def lilypond(self) -> str:
+        """Return LilyPond notation using the preferred spelling."""
+        return self.lilypond_for()
+
+    def lilypond_for(self, prefer_flat: Optional[bool] = None) -> str:
+        """Return LilyPond notation using the preferred spelling."""
+        use_flat = Spelling.prefer_flat if prefer_flat is None else prefer_flat
+        mapping = LILYPOND_OF if use_flat else LILYPOND_OF_SHARP
+        name = mapping[self.offset]
+        if name == "r":
+            return name
+        marks = self.octave - 3
+        if marks >= 0:
+            return name + ("'" * marks)
+        return name + ("," * (-marks))
+
     @abc.setter
     def abc(self, abc: str) -> None:
         """Set the ABC notation of this pitch."""
-        if abc == 'z':
+        if abc == "z":
             self.value = Rest()
             return
         name, suffix = (abc[0], abc[1:]) if abc[0].isalpha() else (abc[:2], abc[2:])
@@ -217,6 +244,13 @@ class Pitch:
         self.value = 0
         self.offset = OFFSET_OF[name]
         self.octave = 4 + va
+
+    @property
+    def freq(self) -> float:
+        """Return frequency in Hz (12-TET, A4=440)."""
+        if isinstance(self.value, Rest):
+            return 0.0
+        return 440.0 * (2 ** ((self.value - 69) / 12))
 
     @classmethod
     def from_abc(cls, abc: str):

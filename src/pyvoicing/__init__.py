@@ -3,6 +3,7 @@ from .constants import ABC_OF, CHROMA_OF, INTERVAL_OF, OFFSET_OF
 from .interval import I, Interval
 from .pitch import P, Pitch
 from .rest import Rest
+from .spelling import Spelling
 from .voicing import V, Voicing
 
 __all__ = [
@@ -17,6 +18,7 @@ __all__ = [
     "C",
     "Pitch",
     "P",
+    "Spelling",
     "Voicing",
     "V",
 ]

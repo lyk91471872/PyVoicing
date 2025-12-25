@@ -85,10 +85,12 @@ class Interval:
     def __le__(self, other: Union[int, str, Interval]) -> bool:
         return not (self > other)
 
-    def __add__(self, other: Union[int, str, Interval]) -> Interval:
+    def add(self, other: Union[int, str, Interval]) -> Interval:
+        """Return the sum of two intervals."""
         return Interval(self.distance + Interval(other).distance)
 
-    def __sub__(self, other: Union[int, str, Interval]) -> Interval:
+    def subtract(self, other: Union[int, str, Interval]) -> Interval:
+        """Return the difference of two intervals."""
         return Interval(self.distance - Interval(other).distance)
 
 

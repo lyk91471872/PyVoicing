@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, List, Union
+from typing import TYPE_CHECKING, Any, Optional, Union
 
-from .constants import CHROMA_OF, OFFSET_OF
+from .constants import CHROMA_OF, CHROMA_OF_SHARP, OFFSET_OF
+from .spelling import Spelling
 from .interval import Interval
 
 if TYPE_CHECKING:
@@ -29,7 +30,8 @@ class Chroma:
                 raise TypeError("expected value of type int|str|Chroma|Pitch")
 
     def __str__(self) -> str:
-        return CHROMA_OF[self.offset]
+        mapping = CHROMA_OF if Spelling.prefer_flat else CHROMA_OF_SHARP
+        return mapping[self.offset]
 
     def __repr__(self) -> str:
         return f"Chroma('{self}')"
@@ -56,37 +58,43 @@ class Chroma:
     def __neg__(self) -> int:
         return -self.offset
 
-    def __mul__(self, value: Union[int, str, Interval]) -> Chroma:
+    def spell(self, prefer_flat: Optional[bool] = None) -> str:
+        """Return chroma name using the preferred spelling."""
+        use_flat = Spelling.prefer_flat if prefer_flat is None else prefer_flat
+        mapping = CHROMA_OF if use_flat else CHROMA_OF_SHARP
+        return mapping[self.offset]
+
+    @property
+    def enharmonic(self) -> str:
+        """Return the opposite spelling."""
+        return self.spell(prefer_flat=not Spelling.prefer_flat)
+
+    def transpose(self, value: Union[int, str, Interval]) -> Chroma:
         """Transpose chroma upwards."""
-        return Chroma((Interval(value) + self.offset).offset)
+        return Chroma(self.offset + Interval(value).distance)
 
-    def __add__(self, value: Union[int, str, Interval]) -> Chroma:
-        """Transpose chroma upwards (alias for __mul__)."""
-        return Chroma((Interval(value) + self.offset).offset)
-
-    def __rshift__(self, value: Union[int, str, Interval]) -> Chroma:
-        """Transpose chroma upwards (alias for __mul__)."""
-        return Chroma((Interval(value) + self.offset).offset)
-
-    def __truediv__(self, value: Union[int, str, Interval]) -> Chroma:
+    def transpose_down(self, value: Union[int, str, Interval]) -> Chroma:
         """Transpose chroma downwards."""
         return Chroma(self.offset - Interval(value).distance)
 
-    def __sub__(self, value: Union[int, str, Interval, Chroma]) -> Union[int, Chroma]:
-        """Transpose downwards or compute difference between chromas."""
-        if isinstance(value, Chroma):
-            return (self.offset - value.offset) % 12
-        return Chroma(self.offset - Interval(value).distance)
-
-    def __lshift__(self, value: Union[int, str, Interval]) -> Chroma:
-        """Transpose chroma downwards (alias for __truediv__)."""
-        return Chroma(self.offset - Interval(value).distance)
-
-    def __rsub__(self, pitches: List[Pitch]) -> List[Pitch]:
-        """Filter out pitches that match this chroma."""
+    def distance_to(self, other: Union[int, str, "Chroma", "Pitch"]) -> Interval:
+        """Return the interval from this chroma to the other (modulo 12)."""
         from .pitch import Pitch
 
-        return [Pitch(_) for _ in pitches if _ != self]
+        match other:
+            case Pitch():
+                other_offset = other.offset
+            case _:
+                other_offset = Chroma(other).offset
+        return Interval((other_offset - self.offset) % 12)
+
+    def __rshift__(self, value: Union[int, str, Interval]) -> Chroma:
+        """Transpose chroma upwards."""
+        return self.transpose(value)
+
+    def __lshift__(self, value: Union[int, str, Interval]) -> Chroma:
+        """Transpose chroma downwards."""
+        return self.transpose_down(value)
 
 
 # shorthand

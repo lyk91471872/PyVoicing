@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+Note: PyVoicing is currently in alpha; the API is subject to change.
+
+## [0.1.4] - 2025-12-25
+### Added
+- Shared spelling preference via Spelling.prefer_flat.
+- Pitch.lilypond with English LilyPond note names.
+- Pitch.freq and pitch/chroma spell/enharmonic helpers.
+- Named methods for transposition and voicing operations.
+- Pytest-based tests for core types.
+
+### Changed
+- Operator usage aligned with named methods (transpose/add/remove).
+- Voicing.tones replaces chord-tone output from ~voicing; ~voicing now returns MIDI values.
+
 ## [0.1.3] - 2025-04-30
 ### Fixed
 - Rest.__str__()

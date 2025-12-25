@@ -2,7 +2,7 @@ from typing import Dict, Union
 
 from .rest import Rest
 
-# Mapping from pitch offset to chroma name
+# Mapping from pitch offset to chroma name (flat-preferred)
 CHROMA_OF: Dict[int, str] = {
     0: "C",
     1: "Db",
@@ -19,7 +19,24 @@ CHROMA_OF: Dict[int, str] = {
     Rest(): "rest",
 }
 
-# Mapping from pitch offset to ABC notation (octave=4)
+# Mapping from pitch offset to chroma name (sharp-preferred)
+CHROMA_OF_SHARP: Dict[int, str] = {
+    0: "C",
+    1: "C#",
+    2: "D",
+    3: "D#",
+    4: "E",
+    5: "F",
+    6: "F#",
+    7: "G",
+    8: "G#",
+    9: "A",
+    10: "A#",
+    11: "B",
+    Rest(): "rest",
+}
+
+# Mapping from pitch offset to ABC notation (octave=4, flat-preferred)
 ABC_OF: Dict[int, str] = {
     0: "=C",
     1: "_D",
@@ -34,6 +51,57 @@ ABC_OF: Dict[int, str] = {
     10: "_B",
     11: "=B",
     Rest(): "z",
+}
+
+# Mapping from pitch offset to ABC notation (octave=4, sharp-preferred)
+ABC_OF_SHARP: Dict[int, str] = {
+    0: "=C",
+    1: "^C",
+    2: "=D",
+    3: "^D",
+    4: "=E",
+    5: "=F",
+    6: "^F",
+    7: "=G",
+    8: "^G",
+    9: "=A",
+    10: "^A",
+    11: "=B",
+    Rest(): "z",
+}
+
+# Mapping from pitch offset to LilyPond name (english, flat-preferred)
+LILYPOND_OF: Dict[int, str] = {
+    0: "c",
+    1: "df",
+    2: "d",
+    3: "ef",
+    4: "e",
+    5: "f",
+    6: "gf",
+    7: "g",
+    8: "af",
+    9: "a",
+    10: "bf",
+    11: "b",
+    Rest(): "r",
+}
+
+# Mapping from pitch offset to LilyPond name (english, sharp-preferred)
+LILYPOND_OF_SHARP: Dict[int, str] = {
+    0: "c",
+    1: "cs",
+    2: "d",
+    3: "ds",
+    4: "e",
+    5: "f",
+    6: "fs",
+    7: "g",
+    8: "gs",
+    9: "a",
+    10: "as",
+    11: "b",
+    Rest(): "r",
 }
 
 # Mapping from interval offset to interval name
